@@ -1,0 +1,7 @@
+# Default: require lead review on everything (adjust as you scale)
+* @<project-lead-github-handle>
+
+# Examples of area ownership:
+# /docs/ @docs-owner
+# /src/ @maintainer1 @maintainer2
+# /docs/hardware/ @hardware-owner

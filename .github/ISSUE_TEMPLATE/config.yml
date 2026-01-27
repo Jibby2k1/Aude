@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: "Start Here: Project Charter"
+    url: "../blob/main/PROJECT_CHARTER.md"
+    about: "Team roles, goals, milestones, and definitions."
+  - name: "Contributing Guide"
+    url: "../blob/main/CONTRIBUTING.md"
+    about: "How we work: Issues → PRs → Merge."

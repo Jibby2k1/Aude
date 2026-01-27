@@ -1,0 +1,64 @@
+name: "Research Task"
+description: "Literature review, baseline replication, experiment design, or analysis task."
+title: "[Research]: "
+labels: ["type: research", "status: triage"]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - literature review
+        - baseline replication
+        - experiment
+        - analysis / evaluation
+        - dataset / collection
+        - hardware / instrumentation
+        - writing / paper
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What question are we answering?
+    validations:
+      required: true
+
+  - type: textarea
+    id: deliverable
+    attributes:
+      label: Deliverable(s)
+      placeholder: |
+        - docs/experiments/<name>.md
+        - reproducible script(s)
+        - table/plot(s)
+        - summary of key papers
+    validations:
+      required: true
+
+  - type: textarea
+    id: definition_of_done
+    attributes:
+      label: Definition of Done
+      placeholder: |
+        - [ ] Repro steps included
+        - [ ] Results table included
+        - [ ] Links to artifacts (PR, docs, data)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options: [critical, high, medium, low]
+    validations:
+      required: true
+
+  - type: input
+    id: due
+    attributes:
+      label: Due date (optional)
+      placeholder: "YYYY-MM-DD"

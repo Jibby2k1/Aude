@@ -1,0 +1,48 @@
+name: "Milestone"
+description: "Define a milestone with outcomes, owners, and dates."
+title: "[Milestone]: "
+labels: ["type: milestone", "status: triage"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Milestone Description
+      description: What is the milestone and why does it matter?
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcomes
+    attributes:
+      label: Expected Outcomes / Artifacts
+      placeholder: |
+        - [ ] Demo / runnable artifact
+        - [ ] Results table + baseline comparison
+        - [ ] Draft section / report
+    validations:
+      required: true
+
+  - type: textarea
+    id: subissues
+    attributes:
+      label: Sub-Issues (create/link)
+      description: List the issues that roll up to this milestone (use # links).
+      placeholder: |
+        - #123
+        - #124
+
+  - type: input
+    id: target_date
+    attributes:
+      label: Target Date
+      placeholder: "YYYY-MM-DD"
+    validations:
+      required: true
+
+  - type: textarea
+    id: owners
+    attributes:
+      label: Owners
+      placeholder: "@user1, @user2"
+    validations:
+      required: true
