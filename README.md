@@ -20,6 +20,7 @@ One-liner: what this project builds and why it matters.
 - `docs/experiments/` experiment tracking + results
 - `docs/datasets/` dataset cards + collection notes
 - `docs/hardware/` hardware specs + BOM
+- `docs/REFERENCE/` reference documents (see `docs/REFERENCE/README.md`)
 - `src/` implementation (create as needed)
 - `scripts/` utilities (create as needed)
 
