@@ -1,4 +1,6 @@
-# <Project Name>
+# Aude
+
+<img src="docs/REFERENCE/Aude_Icon.png" alt="Aude Icon" width="160" />
 
 One-liner: what this project builds and why it matters.
 
@@ -23,6 +25,9 @@ One-liner: what this project builds and why it matters.
 - `docs/REFERENCE/` reference documents (see `docs/REFERENCE/README.md`)
 - `src/` implementation (create as needed)
 - `scripts/` utilities (create as needed)
+
+## Team
+<img src="docs/REFERENCE/Aude_Team.JPG" alt="Aude Team" width="720" />
 
 ## How to Run
 > Fill these in once you have the first runnable artifact.
