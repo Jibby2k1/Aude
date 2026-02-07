@@ -4,6 +4,7 @@
 
 One-liner: what this project builds and why it matters.
 
+## Team
 <img src="docs/REFERENCE/Aude_Team.JPG" alt="Aude Team" width="720" />
 
 ## Quick Links
