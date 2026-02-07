@@ -2,7 +2,7 @@
 
 <img src="docs/REFERENCE/Aude_Icon.png" alt="Aude Icon" width="160" />
 
-One-liner: what this project builds and why it matters.
+Building biologically plausible audio scene analysis for real-world listening environments.
 
 ## Team
 <img src="docs/REFERENCE/Aude_Team.JPG" alt="Aude Team" width="720" />
