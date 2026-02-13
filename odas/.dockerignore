@@ -1,0 +1,5 @@
+build/
+viz/
+node_modules/
+.git/
+.DS_Store

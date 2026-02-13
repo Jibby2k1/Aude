@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ODAS Visualizer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; overflow: hidden; height: 100vh; }
+
+  .layout { display: grid; grid-template-columns: 260px 1fr 240px; grid-template-rows: 56px 1fr; height: 100vh; }
+
+  /* ── Header ── */
+  header { grid-column: 1 / -1; background: #161822; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #2a2d3a; }
+  header h1 { font-size: 18px; font-weight: 600; color: #fff; }
+  header h1 span { color: #6c8aff; }
+  .status { margin-left: auto; display: flex; gap: 16px; font-size: 13px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; position: relative; top: 0px; }
+  .status-dot.on { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+  .status-dot.off { background: #555; }
+
+  /* ── Left Panel ── */
+  .panel-left { background: #161822; padding: 20px; border-right: 1px solid #2a2d3a; overflow-y: auto; }
+  .panel-left h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 12px; }
+  .source-card { background: #1e2030; border-radius: 8px; padding: 12px; margin-bottom: 8px; font-size: 13px; border-left: 3px solid #555; }
+  .source-card.active { border-left-color: var(--src-color); }
+  .source-card .label { font-weight: 600; margin-bottom: 4px; }
+  .source-card .coords { color: #999; font-family: 'SF Mono', monospace; font-size: 12px; }
+  .info-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px solid #1e2030; }
+  .info-row .val { color: #6c8aff; font-family: 'SF Mono', monospace; }
+
+  /* ── 3D Viewport ── */
+  .viewport { position: relative; overflow: hidden; background: #0b0d14; }
+  #canvas3d { width: 100%; height: 100%; display: block; }
+  .viewport-label { position: absolute; bottom: 12px; left: 12px; font-size: 11px; color: #555; }
+
+  /* ── Stream Button ── */
+  .stream-btn { position: absolute; top: 12px; right: 12px; padding: 8px 18px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
+  .stream-btn.paused { background: #4ade80; color: #000; }
+  .stream-btn.paused:hover { background: #22c55e; }
+  .stream-btn.live { background: #f87171; color: #fff; }
+  .stream-btn.live:hover { background: #ef4444; }
+
+  /* ── Right Panel ── */
+  .panel-right { background: #161822; padding: 20px; border-left: 1px solid #2a2d3a; overflow-y: auto; }
+  .panel-right h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 12px; }
+
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; font-size: 13px; }
+  .toggle { position: relative; width: 40px; height: 22px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle .slider { position: absolute; inset: 0; background: #333; border-radius: 22px; cursor: pointer; transition: .2s; }
+  .toggle .slider:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: .2s; }
+  .toggle input:checked + .slider { background: #6c8aff; }
+  .toggle input:checked + .slider:before { transform: translateX(18px); }
+
+  .energy-bar { margin-top: 16px; }
+  .energy-bar label { font-size: 12px; color: #888; display: block; margin-bottom: 6px; }
+  .energy-bar input[type=range] { width: 100%; accent-color: #6c8aff; }
+  .energy-val { text-align: right; font-size: 11px; color: #6c8aff; font-family: monospace; }
+
+  .stats { margin-top: 20px; }
+  .stats .info-row { border-color: #2a2d3a; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <header>
+    <h1><span>ODAS</span> Visualizer</h1>
+    <div class="status">
+      <span><span class="status-dot off" id="dot-track"></span>Tracking</span>
+      <span><span class="status-dot off" id="dot-pot"></span>Potential</span>
+      <span><span class="status-dot off" id="dot-ws"></span>WebSocket</span>
+    </div>
+  </header>
+
+  <div class="panel-left">
+    <h2>Tracked Sources</h2>
+    <div id="source-cards"></div>
+
+    <h2 style="margin-top:20px">Ground Truth</h2>
+    <div id="gt-cards"></div>
+
+    <h2 style="margin-top:20px">Info</h2>
+    <div class="info-row"><span>Frame</span><span class="val" id="info-frame">—</span></div>
+    <div class="info-row"><span>Pot. Frame</span><span class="val" id="info-pframe">—</span></div>
+    <div class="info-row"><span>Sources</span><span class="val" id="info-nsrc">0</span></div>
+    <div class="info-row"><span>Potentials</span><span class="val" id="info-npot">0</span></div>
+  </div>
+
+  <div class="viewport">
+    <canvas id="canvas3d"></canvas>
+    <button class="stream-btn live" id="stream-btn" onclick="toggleStream()">⏸ Pause</button>
+    <div class="viewport-label">Click & drag to rotate · Space to pause/resume</div>
+  </div>
+
+  <div class="panel-right">
+    <h2>Display</h2>
+    <div class="toggle-row">
+      <span>Tracked Sources</span>
+      <label class="toggle"><input type="checkbox" id="show-sources" checked><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Potential Sources</span>
+      <label class="toggle"><input type="checkbox" id="show-potentials" checked><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Source Trails</span>
+      <label class="toggle"><input type="checkbox" id="show-trails" checked><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Sphere Grid</span>
+      <label class="toggle"><input type="checkbox" id="show-sphere" checked><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>Ground Truth</span>
+      <label class="toggle"><input type="checkbox" id="show-gt" checked><span class="slider"></span></label>
+    </div>
+
+    <div class="energy-bar">
+      <label>Min. Energy Threshold</label>
+      <input type="range" id="energy-min" min="0" max="1" step="0.01" value="0">
+      <div class="energy-val" id="energy-val">0.00</div>
+    </div>
+
+    <div class="stats">
+      <h2>Legend</h2>
+      <div id="legend"></div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ─── Config ─────────────────────────────────────────────────────────
+const SOURCE_COLORS = ['#4bc0c0', '#c04bc0', '#c0c01e', '#00c828'];
+const HEAT_COLORS = [
+  '#1000e5','#4003e5','#6f07e6','#9c0be6','#c80fe7',
+  '#e813dc','#e817b4','#e91b8d','#e91f67','#ea2343','#eb2e28'
+];
+const MAX_POT_TRAIL = 80;
+const MAX_SRC_TRAIL = 200;
+
+// Ground truth from simulate_scene.py
+const GROUND_TRUTH = [
+  { label: 'Speaker 1', pos: [0.671, 0.671, 0.313], color: '#ffffff' },
+  { label: 'Speaker 2', pos: [-0.671, -0.671, 0.313], color: '#ffffff' },
+];
+
+// ─── State ──────────────────────────────────────────────────────────
+let showSources = true, showPotentials = true, showTrails = true;
+let energyMin = 0;
+let trackingConnected = false, potentialConnected = false;
+const trackedSources = [null, null, null, null]; // up to 4
+let streamPaused = false;
+
+window.toggleStream = function() {
+  streamPaused = !streamPaused;
+  const btn = document.getElementById('stream-btn');
+  if (streamPaused) {
+    btn.textContent = '▶ Resume';
+    btn.className = 'stream-btn paused';
+  } else {
+    btn.textContent = '⏸ Pause';
+    btn.className = 'stream-btn live';
+  }
+};
+
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && e.target === document.body) {
+    e.preventDefault();
+    toggleStream();
+  }
+});
+
+// ─── Three.js Setup ─────────────────────────────────────────────────
+const canvas = document.getElementById('canvas3d');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setClearColor(0x0b0d14);
+renderer.setPixelRatio(window.devicePixelRatio);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 10);
+camera.position.set(0, -2.2, 0.8);
+camera.up.set(0, 0, 1);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.1;
+controls.enablePan = false;
+controls.minDistance = 1.5;
+controls.maxDistance = 4;
+
+// ─── Sphere ─────────────────────────────────────────────────────────
+const sphereGroup = new THREE.Group();
+scene.add(sphereGroup);
+
+// Upper hemisphere wireframe
+const upperGeo = new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+const upperMat = new THREE.MeshBasicMaterial({ color: 0x2244aa, wireframe: true, transparent: true, opacity: 0.3 });
+sphereGroup.add(new THREE.Mesh(upperGeo, upperMat));
+
+// Lower hemisphere wireframe
+const lowerGeo = new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+const lowerMat = new THREE.MeshBasicMaterial({ color: 0x6b3a1a, wireframe: true, transparent: true, opacity: 0.15 });
+sphereGroup.add(new THREE.Mesh(lowerGeo, lowerMat));
+
+// Equator ring
+const ringGeo = new THREE.RingGeometry(0.99, 1.01, 64);
+const ringMat = new THREE.MeshBasicMaterial({ color: 0x334466, side: THREE.DoubleSide, transparent: true, opacity: 0.4 });
+sphereGroup.add(new THREE.Mesh(ringGeo, ringMat));
+
+// Center marker
+const centerGeo = new THREE.BoxGeometry(0.15, 0.15, 0.04);
+const centerMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+scene.add(new THREE.Mesh(centerGeo, centerMat));
+
+// Axis lines
+const axisLen = 1.3;
+const axes = [
+  { dir: [axisLen, 0, 0], color: 0xff4444 },
+  { dir: [0, axisLen, 0], color: 0x44ff44 },
+  { dir: [0, 0, axisLen], color: 0x4488ff },
+];
+axes.forEach(a => {
+  const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(...a.dir)]);
+  scene.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: a.color, transparent: true, opacity: 0.4 })));
+});
+
+// ─── Ground Truth Markers ───────────────────────────────────────────
+const gtGroup = new THREE.Group();
+scene.add(gtGroup);
+
+GROUND_TRUTH.forEach((gt, i) => {
+  // Outer ring (wireframe sphere)
+  const ringGeo = new THREE.SphereGeometry(0.08, 16, 16);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ff88, wireframe: true, transparent: true, opacity: 0.9 });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.position.set(...gt.pos);
+  gtGroup.add(ring);
+
+  // Inner dot
+  const dotGeo = new THREE.SphereGeometry(0.025, 8, 8);
+  const dotMat = new THREE.MeshBasicMaterial({ color: 0x00ff88 });
+  const dot = new THREE.Mesh(dotGeo, dotMat);
+  dot.position.set(...gt.pos);
+  gtGroup.add(dot);
+
+  // Dashed line from origin to ground truth
+  const lineGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(...gt.pos)
+  ]);
+  const lineMat = new THREE.LineDashedMaterial({ color: 0x00ff88, dashSize: 0.05, gapSize: 0.03, transparent: true, opacity: 0.4 });
+  const line = new THREE.Line(lineGeo, lineMat);
+  line.computeLineDistances();
+  gtGroup.add(line);
+
+  // Label using a sprite
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 128;
+  labelCanvas.height = 48;
+  const ctx = labelCanvas.getContext('2d');
+  ctx.fillStyle = '#00ff88';
+  ctx.font = 'bold 24px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('GT' + (i + 1), 64, 32);
+  const texture = new THREE.CanvasTexture(labelCanvas);
+  const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.position.set(gt.pos[0] * 1.15, gt.pos[1] * 1.15, gt.pos[2] * 1.15);
+  sprite.scale.set(0.25, 0.1, 1);
+  gtGroup.add(sprite);
+});
+
+// ─── Source Spheres (tracked) ───────────────────────────────────────
+const srcMeshes = SOURCE_COLORS.map(color => {
+  const geo = new THREE.SphereGeometry(0.06, 12, 12);
+  const mat = new THREE.MeshBasicMaterial({ color });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.visible = false;
+  scene.add(mesh);
+  return mesh;
+});
+
+// ─── Trail System (uses instanced points via BufferGeometry) ────────
+// Potential source trails
+const potTrailGeo = new THREE.BufferGeometry();
+const potPositions = new Float32Array(MAX_POT_TRAIL * 4 * 3); // 4 pots per frame
+const potColors = new Float32Array(MAX_POT_TRAIL * 4 * 3);
+const potSizes = new Float32Array(MAX_POT_TRAIL * 4);
+potTrailGeo.setAttribute('position', new THREE.BufferAttribute(potPositions, 3));
+potTrailGeo.setAttribute('color', new THREE.BufferAttribute(potColors, 3));
+potTrailGeo.setAttribute('size', new THREE.Float32BufferAttribute(potSizes, 1));
+
+const potTrailMat = new THREE.PointsMaterial({ size: 6, vertexColors: true, sizeAttenuation: false, transparent: true, opacity: 0.8 });
+const potTrailPoints = new THREE.Points(potTrailGeo, potTrailMat);
+scene.add(potTrailPoints);
+
+let potTrailIdx = 0;
+let potTrailCount = 0;
+const potTrailMax = MAX_POT_TRAIL * 4;
+
+// Source trails
+const srcTrailGeos = SOURCE_COLORS.map((color, i) => {
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(MAX_SRC_TRAIL * 3);
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setDrawRange(0, 0);
+  const mat = new THREE.PointsMaterial({ size: 3, color, sizeAttenuation: false, transparent: true, opacity: 0.5 });
+  const pts = new THREE.Points(geo, mat);
+  scene.add(pts);
+  return { geo, pts, idx: 0, count: 0 };
+});
+
+// ─── Helper: parse hex color to RGB floats ──────────────────────────
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255];
+}
+const heatRgb = HEAT_COLORS.map(hexToRgb);
+
+function getHeatColor(energy) {
+  const idx = Math.min(Math.round(energy * 10), 10);
+  return heatRgb[idx] || heatRgb[0];
+}
+
+// ─── Update Functions ───────────────────────────────────────────────
+function updateTracking(frame) {
+  if (streamPaused) return;
+  document.getElementById('info-frame').textContent = frame.timeStamp;
+
+  const activeSrcs = frame.src.filter(s => s.id !== 0);
+  document.getElementById('info-nsrc').textContent = activeSrcs.length;
+
+  // Reset all
+  srcMeshes.forEach(m => m.visible = false);
+
+  // Map sources to slots by id
+  const used = new Set();
+  activeSrcs.forEach(src => {
+    // Find or assign slot
+    let slot = trackedSources.findIndex(s => s === src.id);
+    if (slot === -1) slot = trackedSources.findIndex((s, i) => s === null && !used.has(i));
+    if (slot === -1) return;
+
+    trackedSources[slot] = src.id;
+    used.add(slot);
+
+    const isZero = src.x === 0 && src.y === 0 && src.z === 0;
+    srcMeshes[slot].visible = showSources && !isZero;
+    srcMeshes[slot].position.set(src.x, src.y, src.z);
+
+    // Trail
+    if (showTrails && !isZero) {
+      const trail = srcTrailGeos[slot];
+      const pos = trail.geo.attributes.position.array;
+      const base = trail.idx * 3;
+      pos[base] = src.x;
+      pos[base + 1] = src.y;
+      pos[base + 2] = src.z;
+      trail.idx = (trail.idx + 1) % MAX_SRC_TRAIL;
+      trail.count = Math.min(trail.count + 1, MAX_SRC_TRAIL);
+      trail.geo.attributes.position.needsUpdate = true;
+      trail.geo.setDrawRange(0, trail.count);
+    }
+  });
+
+  // Clear unused slots
+  trackedSources.forEach((id, i) => {
+    if (!used.has(i)) trackedSources[i] = null;
+  });
+
+  updateSourceCards(frame.src, activeSrcs);
+}
+
+function updatePotential(frame) {
+  if (streamPaused) return;
+  document.getElementById('info-pframe').textContent = frame.timeStamp;
+
+  updateGTErrors(frame.src);
+
+  if (!showPotentials) return;
+
+  const validSrcs = frame.src.filter(s => s.E >= energyMin);
+  document.getElementById('info-npot').textContent = validSrcs.length;
+
+  validSrcs.forEach(src => {
+    const base3 = potTrailIdx * 3;
+    potPositions[base3] = src.x;
+    potPositions[base3 + 1] = src.y;
+    potPositions[base3 + 2] = src.z;
+
+    const [r, g, b] = getHeatColor(src.E);
+    potColors[base3] = r;
+    potColors[base3 + 1] = g;
+    potColors[base3 + 2] = b;
+
+    potSizes[potTrailIdx] = 4 + src.E * 6;
+
+    potTrailIdx = (potTrailIdx + 1) % potTrailMax;
+    potTrailCount = Math.min(potTrailCount + 1, potTrailMax);
+  });
+
+  potTrailGeo.attributes.position.needsUpdate = true;
+  potTrailGeo.attributes.color.needsUpdate = true;
+  potTrailGeo.attributes.size.needsUpdate = true;
+  potTrailGeo.setDrawRange(0, potTrailCount);
+}
+
+function clearAll() {
+  potTrailIdx = 0;
+  potTrailCount = 0;
+  potTrailGeo.setDrawRange(0, 0);
+  srcTrailGeos.forEach(t => { t.idx = 0; t.count = 0; t.geo.setDrawRange(0, 0); });
+  srcMeshes.forEach(m => m.visible = false);
+  trackedSources.fill(null);
+}
+
+// ─── Source Cards UI ────────────────────────────────────────────────
+const cardsEl = document.getElementById('source-cards');
+// Pre-create 4 cards
+for (let i = 0; i < 4; i++) {
+  const card = document.createElement('div');
+  card.className = 'source-card';
+  card.style.setProperty('--src-color', SOURCE_COLORS[i]);
+  card.innerHTML = `<div class="label" style="color:${SOURCE_COLORS[i]}">Source ${i + 1}</div><div class="coords">Inactive</div>`;
+  card.id = 'card-' + i;
+  cardsEl.appendChild(card);
+}
+
+function updateSourceCards(allSrc, activeSrcs) {
+  for (let i = 0; i < 4; i++) {
+    const card = document.getElementById('card-' + i);
+    const id = trackedSources[i];
+    if (id !== null) {
+      const src = allSrc.find(s => s.id === id);
+      if (src && !(src.x === 0 && src.y === 0 && src.z === 0)) {
+        card.className = 'source-card active';
+        const az = (Math.atan2(src.y, src.x) * 180 / Math.PI).toFixed(1);
+        const el = (Math.asin(src.z / Math.sqrt(src.x**2 + src.y**2 + src.z**2)) * 180 / Math.PI).toFixed(1);
+        card.querySelector('.coords').textContent = `Az: ${az}°  El: ${el}°\nx: ${src.x.toFixed(3)}  y: ${src.y.toFixed(3)}  z: ${src.z.toFixed(3)}`;
+        continue;
+      }
+    }
+    card.className = 'source-card';
+    card.querySelector('.coords').textContent = 'Inactive';
+  }
+}
+
+// ─── Ground Truth Cards ─────────────────────────────────────────────
+const gtCardsEl = document.getElementById('gt-cards');
+GROUND_TRUTH.forEach((gt, i) => {
+  const card = document.createElement('div');
+  card.className = 'source-card active';
+  card.style.setProperty('--src-color', '#00ff88');
+  card.style.borderLeftColor = '#00ff88';
+  const az = (Math.atan2(gt.pos[1], gt.pos[0]) * 180 / Math.PI).toFixed(1);
+  const el = (Math.asin(gt.pos[2]) * 180 / Math.PI).toFixed(1);
+  card.innerHTML = `<div class="label" style="color:#00ff88">GT${i+1}: ${gt.label}</div>
+    <div class="coords">Az: ${az}°  El: ${el}°\nx: ${gt.pos[0].toFixed(3)}  y: ${gt.pos[1].toFixed(3)}  z: ${gt.pos[2].toFixed(3)}</div>
+    <div class="coords" style="margin-top:4px;color:#6c8aff" id="gt-error-${i}">Best match: —</div>`;
+  gtCardsEl.appendChild(card);
+});
+
+function angularError(a, b) {
+  // Angle between two unit vectors in degrees
+  const dot = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+  return Math.acos(Math.min(1, Math.max(-1, dot))) * 180 / Math.PI;
+}
+
+function updateGTErrors(potSrcs) {
+  if (!potSrcs || potSrcs.length === 0) return;
+
+  GROUND_TRUTH.forEach((gt, i) => {
+    let bestErr = Infinity;
+    let bestSrc = null;
+    potSrcs.forEach(src => {
+      if (src.E < energyMin) return;
+      const mag = Math.sqrt(src.x*src.x + src.y*src.y + src.z*src.z);
+      if (mag < 0.01) return;
+      const err = angularError(gt.pos, [src.x/mag, src.y/mag, src.z/mag]);
+      if (err < bestErr) { bestErr = err; bestSrc = src; }
+    });
+
+    const el = document.getElementById('gt-error-' + i);
+    if (bestSrc && bestErr < 90) {
+      const color = bestErr < 10 ? '#4ade80' : bestErr < 25 ? '#facc15' : '#f87171';
+      el.innerHTML = `Nearest: <span style="color:${color};font-weight:600">${bestErr.toFixed(1)}°</span> error (E: ${bestSrc.E.toFixed(3)})`;
+    } else {
+      el.textContent = 'Best match: —';
+    }
+  });
+}
+
+// ─── Legend ──────────────────────────────────────────────────────────
+const legendEl = document.getElementById('legend');
+SOURCE_COLORS.forEach((c, i) => {
+  const row = document.createElement('div');
+  row.className = 'info-row';
+  row.innerHTML = `<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c};margin-right:6px"></span>Source ${i+1}</span><span class="val">Track</span>`;
+  legendEl.appendChild(row);
+});
+const potRow = document.createElement('div');
+potRow.className = 'info-row';
+potRow.innerHTML = `<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:linear-gradient(90deg,${HEAT_COLORS[0]},${HEAT_COLORS[10]});margin-right:6px"></span>Potential</span><span class="val">SSL</span>`;
+legendEl.appendChild(potRow);
+
+const gtRow = document.createElement('div');
+gtRow.className = 'info-row';
+gtRow.innerHTML = `<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid #00ff88;margin-right:6px"></span>Ground Truth</span><span class="val">Actual</span>`;
+legendEl.appendChild(gtRow);
+
+// ─── UI Controls ────────────────────────────────────────────────────
+document.getElementById('show-sources').onchange = (e) => {
+  showSources = e.target.checked;
+  if (!showSources) srcMeshes.forEach(m => m.visible = false);
+};
+document.getElementById('show-potentials').onchange = (e) => {
+  showPotentials = e.target.checked;
+  potTrailPoints.visible = showPotentials;
+};
+document.getElementById('show-trails').onchange = (e) => {
+  showTrails = e.target.checked;
+  srcTrailGeos.forEach(t => t.pts.visible = showTrails);
+};
+document.getElementById('show-sphere').onchange = (e) => {
+  sphereGroup.visible = e.target.checked;
+};
+document.getElementById('show-gt').onchange = (e) => {
+  gtGroup.visible = e.target.checked;
+};
+document.getElementById('energy-min').oninput = (e) => {
+  energyMin = parseFloat(e.target.value);
+  document.getElementById('energy-val').textContent = energyMin.toFixed(2);
+};
+
+// ─── WebSocket ──────────────────────────────────────────────────────
+let ws;
+let reconnectTimer;
+
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+
+  ws.onopen = () => {
+    document.getElementById('dot-ws').className = 'status-dot on';
+    console.log('WebSocket connected');
+  };
+
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.type === 'tracking') updateTracking(msg.data);
+    else if (msg.type === 'potential') updatePotential(msg.data);
+    else if (msg.type === 'status') {
+      if (msg.data.tracking !== undefined) {
+        trackingConnected = msg.data.tracking;
+        document.getElementById('dot-track').className = 'status-dot ' + (trackingConnected ? 'on' : 'off');
+        if (trackingConnected) clearAll(); // reset on new connection
+      }
+      if (msg.data.potential !== undefined) {
+        potentialConnected = msg.data.potential;
+        document.getElementById('dot-pot').className = 'status-dot ' + (potentialConnected ? 'on' : 'off');
+      }
+    }
+  };
+
+  ws.onclose = () => {
+    document.getElementById('dot-ws').className = 'status-dot off';
+    document.getElementById('dot-track').className = 'status-dot off';
+    document.getElementById('dot-pot').className = 'status-dot off';
+    clearAll();
+    reconnectTimer = setTimeout(connectWS, 2000);
+  };
+}
+
+connectWS();
+
+// ─── Render Loop ────────────────────────────────────────────────────
+function resize() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * window.devicePixelRatio;
+  canvas.height = rect.height * window.devicePixelRatio;
+  renderer.setSize(rect.width, rect.height);
+  camera.aspect = rect.width / rect.height;
+  camera.updateProjectionMatrix();
+}
+
+window.addEventListener('resize', resize);
+resize();
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
