@@ -34,7 +34,7 @@ echo "Host IP: $HOST_IP"
 
 # Patch config: resolve host IP and redirect input to the named pipe
 sed -e "s/__HOST_IP__/$HOST_IP/g" \
-    -e "s|/odas/test_data/test_scene.raw|$PIPE|g" \
+    -e "s|/odas/test_data/data/test_scene.raw|$PIPE|g" \
     "$CONFIG_TEMPLATE" > "$CONFIG"
 echo "Patched config: $CONFIG"
 

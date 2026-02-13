@@ -1,2 +1,5 @@
+# Generated/downloaded test data and ODAS outputs
+odas/test_data/data/*
+
 # Node.js dependencies
 node_modules/
