@@ -19,7 +19,7 @@ HOP_SIZE=128
 # Bytes per hop: hopSize * nChannels * bytesPerSample
 HOP_BYTES=$((HOP_SIZE * N_CHANNELS * BYTES_PER_SAMPLE))
 
-# Resolve host IP (Docker Desktop for Mac) — prefer IPv4
+# Resolve host IP (Docker Desktop for Mac) - prefer IPv4
 HOST_IP=$(getent ahostsv4 host.docker.internal 2>/dev/null | head -1 | awk '{print $1}')
 if [ -z "$HOST_IP" ]; then
     # Fallback to any address
