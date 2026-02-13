@@ -20,7 +20,7 @@ import urllib.request
 # ============================================================
 # STEP 1: Download real speech if needed
 # ============================================================
-speech_dir = "/odas/test_data"
+speech_dir = "/odas/test_data/data"
 fs = 16000
 duration = 8.0  # seconds
 
@@ -232,7 +232,7 @@ signals = signals / max_val * 0.9
 signals_int32 = (signals * (2**31 - 1)).astype(np.int32)
 interleaved = signals_int32.T.flatten()
 
-output_path = "/odas/test_data/test_scene.raw"
+output_path = "/odas/test_data/data/test_scene.raw"
 with open(output_path, 'wb') as f:
     f.write(interleaved.tobytes())
 
@@ -240,6 +240,6 @@ print(f"\nOutput saved to: {output_path}")
 print(f"Format: {signals_int32.shape[1]} samples, 4 channels, 32-bit signed int, 16kHz")
 print(f"File size: {os.path.getsize(output_path)} bytes")
 
-wav_path = "/odas/test_data/test_scene.wav"
+wav_path = "/odas/test_data/data/test_scene.wav"
 sf.write(wav_path, signals.T, fs)
 print(f"WAV saved to: {wav_path}")

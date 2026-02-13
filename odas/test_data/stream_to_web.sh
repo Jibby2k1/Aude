@@ -5,7 +5,7 @@
 # ============================================================
 
 PIPE="/tmp/odas_audio_pipe"
-RAW_FILE="/odas/test_data/test_scene.raw"
+RAW_FILE="/odas/test_data/data/test_scene.raw"
 CONFIG_TEMPLATE="/odas/test_data/respeaker_4_file_to_web.cfg"
 CONFIG="/tmp/odas_web.cfg"
 ODASLIVE="/odas/build/bin/odaslive"

@@ -128,9 +128,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Replay ODAS output to viz server')
     parser.add_argument('--host', default=default_host,
                         help=f'Viz server host IP (default: {default_host})')
-    parser.add_argument('--ssl', default='/odas/test_data/ssl_output.json',
+    parser.add_argument('--ssl', default='/odas/test_data/data/ssl_output.json',
                         help='Path to SSL output JSON file')
-    parser.add_argument('--sst', default='/odas/test_data/sst_output.json',
+    parser.add_argument('--sst', default='/odas/test_data/data/sst_output.json',
                         help='Path to SST output JSON file')
     parser.add_argument('--loop', action='store_true',
                         help='Loop the replay continuously')
