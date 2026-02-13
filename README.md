@@ -30,23 +30,37 @@ Building biologically plausible audio scene analysis for real-world listening en
 - `scripts/` utilities (create as needed)
 
 ## How to Run
-> Fill these in once you have the first runnable artifact.
+
+### Prerequisites
+- Install [Docker](https://www.docker.com/products/docker-desktop/)
+- If on Windows, install [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)
 
 ### Setup
 ```bash
-# e.g. python -m venv .venv && source .venv/bin/activate
+cd odas/viz
+npm install
 ```
 
 ### Run
+1. Start the scene simulation:
 ```bash
-# e.g. python -m src.main --help
+cd odas/
+docker compose run odas python3 /odas/test_data/simulate_scene.py
 ```
 
-### Tests
+2. Start the visualization server:
 ```bash
-# e.g. pytest
+cd odas/viz
+npm start
+```
+
+
+3. Stream to web:
+```bash
+cd odas/
+docker compose run odas bash /odas/test_data/stream_to_web.sh
 ```
 
 ### License
-Decise early. MIT/Apache-2.0 are common defaults.
+Decide early. MIT/Apache-2.0 are common defaults.
 ---
